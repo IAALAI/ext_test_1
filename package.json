@@ -1,5 +1,5 @@
 {
-    "name": "ar2",
+    "name": "new_tabc",
     "version": "0.0.1",
     "displayName": "iaalai test extension",
     "author": "@iaalai",
@@ -12,7 +12,8 @@
         "dev": "vite",
         "serve:firefox": "web-ext run --start-url \"about:debugging#/runtime/this-firefox\"  --source-dir ./dist/",
         "serve:chrome": "web-ext run -t chromium --start-url \"https://example.com\" --source-dir ./dist/",
-        "serve:edge": "web-ext run -t edge --start-url \"https://example.com\" --source-dir ./dist/"
+        "serve:edge": "web-ext run -t edge --start-url \"https://example.com\" --source-dir ./dist/",
+        "package": "npm run build && web-ext build --source-dir ./dist --filename iaalai_tabs.xpi"
     },
     "license": "MIT",
     "devDependencies": {

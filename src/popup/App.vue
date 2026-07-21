@@ -2,13 +2,18 @@
     <img src="https://examplefile.com/storage/file/file_icons/svg.png" height="45" alt="" />
     <div>now work tabs: {{ tabs_count }}</div>
     <div>now bookmarks: {{ bookmarks_count }}</div>
+    <div><button @click="getOtherDeviceTabs">get other device tabs</button></div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
+// import chrome from "webextension-polyfill";
 
 let tabs_count = ref(0);
 let bookmarks_count = ref(0);
+
+async function getOtherDeviceTabs() {
+}
 
 chrome.tabs.query({}, (tabs) => {
     tabs_count.value = tabs.length;

@@ -2,7 +2,8 @@
   "compilerOptions": {
     "composite": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
+    "types": ["chrome"],
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true
   },

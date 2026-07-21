@@ -18,7 +18,7 @@ const configData = ref({});
 
 async function getConfig() {
     try {
-        const response = await Browser.runtime.sendMessage({ type: MessageType.GET_CONFIG });
+        const response = await Browser.runtime.sendMessage({ type: MessageType.get_config });
         if (response) {
             configData.value = response.config;
         }
@@ -31,7 +31,7 @@ onMounted(() => {
     getConfig();
 
     Browser.runtime.onMessage.addListener((request) => {
-        if (request.type === MessageType.CONFIG_UPDATE) {
+        if (request.type === MessageType.update_config) {
             configData.value = request.config;
         }
     })

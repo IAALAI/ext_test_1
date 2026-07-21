@@ -1,9 +1,9 @@
 const MessageType = {
-    GET_CONFIG: "GET_CONFIG",
-    CONFIG_UPDATE: "CONFIG_UPDATE",
-    SET_CONFIG: "SET_CONFIG",
-    GET_TABS_COUNT: "GET_TABS_COUNT",
-    GET_MARKBOOKS_COUNT: "GET_MARKBOOKS_COUNT",
+    get_config: "GET_CONFIG",
+    update_config: "UPDATE_CONFIG",
+    get_tabs_info: "GET_TABS_INFO",
+    update_tabs_info: "UPDATE_TABS_INFO",
+    get_bookmarks_content: "GET_BOOKMARKS_CONTENT",
 }
 
 export default MessageType;
