@@ -8,12 +8,13 @@
     "scripts": {
         "build": "vite build",
         "check": "vue-tsc --noEmit",
+        "test": "node --experimental-strip-types --test tests/*.test.mjs",
         "watch": "vite build --watch --mode development --minify false",
         "dev": "vite",
         "serve:firefox": "web-ext run --start-url \"about:debugging#/runtime/this-firefox\"  --source-dir ./dist/",
         "serve:chrome": "web-ext run -t chromium --start-url \"https://example.com\" --source-dir ./dist/",
         "serve:edge": "web-ext run -t edge --start-url \"https://example.com\" --source-dir ./dist/",
-        "package": "npm run build && web-ext build --source-dir ./dist --filename iaalai_tabs.xpi"
+        "package": "npm run build && web-ext build --source-dir ./dist --filename iaalai_tabs.xpi --overwrite-dest"
     },
     "license": "MIT",
     "devDependencies": {
@@ -23,7 +24,7 @@
         "@vitejs/plugin-vue": "^4.5.0",
         "typescript": "^5",
         "vite": "^5.0.0",
-        "vue-tsc": "^1.8.22",
+        "vue-tsc": "^3.3.12",
         "web-ext": "^7.8.0"
     },
     "dependencies": {

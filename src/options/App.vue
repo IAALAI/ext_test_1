@@ -1,18 +1,13 @@
 <template>
-    <main>
-        <h1>option</h1>
+    <main class="manager">
+        <header><a :href="homeUrl">← 首页</a><h1>设置</h1></header>
+        <SettingsPanel />
     </main>
 </template>
 
 <script setup lang="ts">
+import browser from "webextension-polyfill";
+import SettingsPanel from "../home/SettingsPanel.vue";
+import "../home/manager.css";
+const homeUrl = browser.runtime.getURL("src/home/index.html");
 </script>
-
-<style>
-main {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-}
-</style>

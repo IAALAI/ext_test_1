@@ -1,10 +1,10 @@
 <template>
+    <div class="tab-badge">{{ tabs_count }}</div>
     <aside>
-        <div class="times">{{hh}} : {{mm}} : {{ss}}</div>
-        <div class="date">{{days}} , {{month}} , {{day}}</div>
+        <div class="times">{{ hh }} : {{ mm }} : {{ ss }}</div>
+        <div class="date">{{ days }} , {{ month }} , {{ day }}</div>
     </aside>
     <main>
-        <div>功能概览</div>
         <ul>
             <li>
                 <router-link to="/tabs">
@@ -17,7 +17,7 @@
             <li>
                 <router-link to="/bookmarks">
                     <div class="item">
-                        <div class="label">书签管理</div>
+                        <div class="label">收藏夹管理</div>
                         <div class="value">{{ marks_count }}</div>
                     </div>
                 </router-link>
@@ -27,15 +27,17 @@
                     <div class="item">
                         <div class="label">分组管理</div>
                         <div class="value">{{ groups_count }}</div>
-                    </div> 
+                    </div>
                 </router-link>
             </li>
-            <li><router-link to="/option">
-                <div class="item">
-                    <div class="label">选项设置</div>
-                    <div class="value value--placeholder">0</div>
-                </div>
-            </router-link></li>
+            <li>
+                <router-link to="/settings">
+                    <div class="item">
+                        <div class="label">设置</div>
+                        <div class="value">›</div>
+                    </div>
+                </router-link>
+            </li>
         </ul>
     </main>
 </template>
@@ -44,35 +46,65 @@
 import browser from "webextension-polyfill";
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { countBookmarks } from "~/common";
-let data = ref<any[]>([]),
-    tabs_count = ref(0),
-    marks_count = ref(0),
-    groups_count = ref(0),
-    now = new Date();
+import { queryGroups } from "~/groups";
 
-const hh = ref(""),
-    mm = ref(""),
-    ss = ref(""),
-    day = now.getDate().toString().padStart(2, '0'),
-    month = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(now),
-    days = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(now);
+const tabs_count = ref(0);
+const marks_count = ref(0);
+const groups_count = ref(0);
+const hh = ref("");
+const mm = ref("");
+const ss = ref("");
+const days = ref("");
+const month = ref("");
+const day = ref("");
+const weekdayFormatter = new Intl.DateTimeFormat("en-US", { weekday: "long" });
+const monthFormatter = new Intl.DateTimeFormat("en-US", { month: "long" });
 
-async function updateTime() {
-    now = new Date();
-    hh.value = now.getHours().toString().padStart(2, '0');
-    mm.value = now.getMinutes().toString().padStart(2, '0');
-    ss.value = now.getSeconds().toString().padStart(2, '0');
+let timer: ReturnType<typeof setInterval> | null = null;
+
+function pad2(n: number) {
+    return n.toString().padStart(2, "0");
+}
+
+function updateTime() {
+    const now = new Date();
+    hh.value = pad2(now.getHours());
+    mm.value = pad2(now.getMinutes());
+    ss.value = pad2(now.getSeconds());
+    days.value = weekdayFormatter.format(now);
+    month.value = monthFormatter.format(now);
+    day.value = pad2(now.getDate());
+}
+
+function startClock() {
+    if (timer != null) return;
+    updateTime();
+    timer = setInterval(updateTime, 1000);
+}
+
+function stopClock() {
+    if (timer == null) return;
+    clearInterval(timer);
+    timer = null;
+}
+
+function onVisibilityChange() {
+    if (document.hidden) {
+        stopClock();
+    } else {
+        startClock();
+    }
 }
 
 async function getCount() {
-    const { tabsInfo, groupInfo, bookmarks } = await browser.storage.session.get([
-        "tabsInfo",
-        "groupInfo",
-        "bookmarks"
+    const [tabsInfo, bookmarks, groupInfo] = await Promise.all([
+        browser.tabs.query({}),
+        browser.bookmarks.getTree(),
+        queryGroups(),
     ]);
     tabs_count.value = Array.isArray(tabsInfo) ? tabsInfo.length : 0;
-    groups_count.value = Array.isArray(groupInfo) ? groupInfo.length : 0;
     marks_count.value = Array.isArray(bookmarks) ? countBookmarks(bookmarks) : 0;
+    groups_count.value = groupInfo.length;
 }
 
 function onSessionStorageChanged(
@@ -85,29 +117,40 @@ function onSessionStorageChanged(
         const next = changes.tabsInfo.newValue;
         tabs_count.value = Array.isArray(next) ? next.length : 0;
     }
-    if (changes.groupInfo) {
-        const next = changes.groupInfo.newValue;
-        groups_count.value = Array.isArray(next) ? next.length : 0;
-    }
     if (changes.bookmarks) {
         const next = changes.bookmarks.newValue;
         marks_count.value = Array.isArray(next) ? countBookmarks(next) : 0;
     }
+    if (changes.groupInfo) {
+        groups_count.value = Array.isArray(changes.groupInfo.newValue) ? changes.groupInfo.newValue.length : 0;
+    }
 }
 
 onMounted(() => {
-    updateTime();
-    setInterval(updateTime, 1000);
-    getCount();
+    if (!document.hidden) startClock();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    void getCount().catch(console.error);
     browser.storage.onChanged.addListener(onSessionStorageChanged);
 });
 
 onBeforeUnmount(() => {
+    stopClock();
+    document.removeEventListener("visibilitychange", onVisibilityChange);
     browser.storage.onChanged.removeListener(onSessionStorageChanged);
 });
 </script>
 
 <style scoped>
+.tab-badge {
+    position: fixed;
+    top: 12px;
+    right: 16px;
+    font-size: 12px;
+    color: #aaa;
+    line-height: 1;
+    z-index: 1;
+}
+
 aside {
     height: 40vh;
     max-height: 400px;
@@ -123,6 +166,9 @@ aside {
     .times {
         font-size: 32px;
         font-weight: bold;
+        text-align: center;
+        padding: 0 16px;
+        word-break: break-word;
     }
     .date {
         font-size: 28px;
@@ -130,11 +176,6 @@ aside {
 }
 
 main {
-    > div {
-        font-size: 24px;
-        margin-bottom: 10px;
-        text-align: center;
-    }
     > ul {
         margin: 24px auto;
         padding: 0;
@@ -168,10 +209,6 @@ main {
                 min-width: 3ch;
                 text-align: right;
                 line-height: 1.2;
-            }
-
-            .value--placeholder {
-                visibility: hidden;
             }
         }
         > li:last-child {

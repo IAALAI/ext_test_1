@@ -1,22 +1,14 @@
 import browser from "webextension-polyfill";
+import { groupApi, queryGroups } from "../groups";
+import { createTabSleeper, SLEEP_ALARM, SLEEP_SETTINGS_KEY } from "../tab-sleep";
 
-let tabsUpdateTimer: number | null = null;
-let groupsUpdateTimer: number | null = null;
-let bookmarksUpdateTimer: number | null = null;
-
-function debounceTabsUpdate() {
-    if (tabsUpdateTimer) clearTimeout(tabsUpdateTimer);
-    tabsUpdateTimer = setTimeout(updateTabsInfo, 100);
-}
-
-function debounceGroupsUpdate() {
-    if (groupsUpdateTimer) clearTimeout(groupsUpdateTimer);
-    groupsUpdateTimer = setTimeout(updateGroupInfo, 100);
-}
-
-function debounceBookmarksUpdate() {
-    if (bookmarksUpdateTimer) clearTimeout(bookmarksUpdateTimer);
-    bookmarksUpdateTimer = setTimeout(updateBookmarksInfo, 100);
+function report(error: unknown) { console.error("New Tabs:", error); }
+function debounce(task: () => Promise<void>) {
+    let timer: ReturnType<typeof setTimeout>;
+    return () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { void task().catch(report); }, 100);
+    };
 }
 
 async function updateTabsInfo() {
@@ -24,29 +16,49 @@ async function updateTabsInfo() {
     await browser.storage.session.set({ tabsInfo });
     await browser.action.setBadgeText({ text: `${tabsInfo.length}` });
 }
-
 async function updateGroupInfo() {
-    const groupInfo = await chrome.tabGroups.query({});
-    await browser.storage.session.set({ groupInfo });
+    await browser.storage.session.set({ groupInfo: await queryGroups() });
 }
-
 async function updateBookmarksInfo() {
-    const bookmarks = await browser.bookmarks.getTree();
-    await browser.storage.session.set({ bookmarks });
+    await browser.storage.session.set({ bookmarks: await browser.bookmarks.getTree() });
+}
+const refreshTabs = debounce(updateTabsInfo);
+const refreshGroups = debounce(updateGroupInfo);
+const refreshBookmarks = debounce(updateBookmarksInfo);
+
+for (const event of [browser.tabs.onUpdated, browser.tabs.onCreated, browser.tabs.onRemoved,
+    browser.tabs.onActivated, browser.tabs.onMoved, browser.tabs.onAttached, browser.tabs.onDetached]) {
+    event.addListener(refreshTabs);
+}
+if (groupApi) {
+    for (const event of [groupApi.onCreated, groupApi.onRemoved, groupApi.onUpdated, groupApi.onMoved]) {
+        event.addListener(refreshGroups);
+    }
+}
+for (const event of [browser.bookmarks.onCreated, browser.bookmarks.onRemoved, browser.bookmarks.onChanged, browser.bookmarks.onMoved]) {
+    event.addListener(refreshBookmarks);
 }
 
-browser.tabs.onUpdated.addListener(() => debounceTabsUpdate());
-browser.tabs.onCreated.addListener(() => debounceTabsUpdate());
-browser.tabs.onRemoved.addListener(() => debounceTabsUpdate());
-browser.tabs.onActivated.addListener(() => debounceTabsUpdate());
-chrome.tabGroups.onCreated.addListener(() => debounceGroupsUpdate());
-chrome.tabGroups.onRemoved.addListener(() => debounceGroupsUpdate());
-chrome.tabGroups.onUpdated.addListener(() => debounceGroupsUpdate());
-browser.bookmarks.onCreated.addListener(() => debounceBookmarksUpdate());
-browser.bookmarks.onRemoved.addListener(() => debounceBookmarksUpdate());
-browser.bookmarks.onChanged.addListener(() => debounceBookmarksUpdate());
-browser.bookmarks.onMoved.addListener(() => debounceBookmarksUpdate());
+const sleeper = createTabSleeper(browser);
+browser.alarms.onAlarm.addListener(alarm => {
+    if (alarm.name === SLEEP_ALARM) void sleeper.run().then(refreshTabs).catch(report);
+});
+browser.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && changes[SLEEP_SETTINGS_KEY]) void sleeper.configure().catch(report);
+});
+// Recreate alarms after browser restart, but keep a still-valid alarm's deadline.
+browser.runtime.onStartup.addListener(() => { void sleeper.configure().catch(report); });
+browser.runtime.onInstalled.addListener(() => { void sleeper.configure().catch(report); });
+browser.runtime.onMessage.addListener((message, sender) => {
+    if (sender.id !== browser.runtime.id || !sender.url?.startsWith(browser.runtime.getURL(""))) return;
+    if (message?.type === "SLEEP_TAB" && Number.isInteger(message.tabId)) {
+        return sleeper.discardOne(message.tabId).then(result => { refreshTabs(); return { result }; });
+    }
+    if (message?.type === "CHECK_SLEEP_TABS") {
+        return sleeper.run().then(status => { refreshTabs(); return status; });
+    }
+});
 
-updateTabsInfo();
-updateGroupInfo();
-updateBookmarksInfo();
+for (const task of [updateTabsInfo, updateGroupInfo, updateBookmarksInfo, sleeper.configure]) {
+    void task().catch(report);
+}

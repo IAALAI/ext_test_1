@@ -4,7 +4,7 @@ const sharedManifest: Partial<chrome.runtime.ManifestBase> = {
     "browser_specific_settings": {
         "gecko": {
             "id": "@iaalai_tabs",
-            "strict_min_version": "58.0",
+            "strict_min_version": "115.0",
             "data_collection_permissions": {
                 "required": [ "none" ],
             }
@@ -26,7 +26,10 @@ const sharedManifest: Partial<chrome.runtime.ManifestBase> = {
         page: "src/options/index.html",
         open_in_tab: true,
     },
-    permissions: ["tabs","tabGroups","bookmarks","storage", "sessions"],
+    permissions: ["tabs", "tabGroups", "bookmarks", "storage", "sessions", "alarms", "scripting"],
+    chrome_url_overrides: {
+        newtab: "src/home/index.html",
+    },
 };
 
 const browserAction = {
