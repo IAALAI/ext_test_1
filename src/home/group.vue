@@ -40,7 +40,6 @@
                 <ul class="list">
                     <li v-for="tab in members(group.id)" :key="tab.id" class="row">
                         <div class="details"><button class="title" :disabled="busy" @click="activate(tab)">{{ tab.title || tab.url }}</button><div class="url muted">{{ tab.url }}</div></div>
-                        <span v-if="tab.discarded" class="tag">已休眠</span>
                         <button :disabled="busy" @click="removeTab(tab)">移出分组</button>
                     </li>
                 </ul>

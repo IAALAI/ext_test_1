@@ -30,14 +30,6 @@
                     </div>
                 </router-link>
             </li>
-            <li>
-                <router-link to="/settings">
-                    <div class="item">
-                        <div class="label">设置</div>
-                        <div class="value">›</div>
-                    </div>
-                </router-link>
-            </li>
         </ul>
     </main>
 </template>

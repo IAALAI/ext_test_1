@@ -24,11 +24,6 @@ const routes: RouteRecordRaw[] = [
         path: '/groups',
         name: 'Groups',
         component: () => import('./group.vue'),
-    },{
-        path: '/settings',
-        alias: '/option',
-        name: 'Option',
-        component: () => import('./option.vue'),
     }
 ]
 

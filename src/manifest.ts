@@ -22,11 +22,7 @@ const sharedManifest: Partial<chrome.runtime.ManifestBase> = {
             matches: ["*://*/*"],
         },
     ],
-    options_ui: {
-        page: "src/options/index.html",
-        open_in_tab: true,
-    },
-    permissions: ["tabs", "tabGroups", "bookmarks", "storage", "sessions", "alarms", "scripting"],
+    permissions: ["tabs", "tabGroups", "bookmarks", "storage", "sessions"],
     chrome_url_overrides: {
         newtab: "src/home/index.html",
     },
@@ -49,10 +45,6 @@ const ManifestV2 = {
         persistent: true,
     },
     browser_action: browserAction,
-    options_ui: {
-        ...sharedManifest.options_ui,
-        chrome_style: false,
-    },
     permissions: [...sharedManifest.permissions, "*://*/*"],
 };
 

@@ -1,6 +1,5 @@
 import browser from "webextension-polyfill";
 import { groupApi, queryGroups } from "../groups";
-import { createTabSleeper, SLEEP_ALARM, SLEEP_SETTINGS_KEY } from "../tab-sleep";
 
 function report(error: unknown) { console.error("New Tabs:", error); }
 function debounce(task: () => Promise<void>) {
@@ -39,26 +38,6 @@ for (const event of [browser.bookmarks.onCreated, browser.bookmarks.onRemoved, b
     event.addListener(refreshBookmarks);
 }
 
-const sleeper = createTabSleeper(browser);
-browser.alarms.onAlarm.addListener(alarm => {
-    if (alarm.name === SLEEP_ALARM) void sleeper.run().then(refreshTabs).catch(report);
-});
-browser.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && changes[SLEEP_SETTINGS_KEY]) void sleeper.configure().catch(report);
-});
-// Recreate alarms after browser restart, but keep a still-valid alarm's deadline.
-browser.runtime.onStartup.addListener(() => { void sleeper.configure().catch(report); });
-browser.runtime.onInstalled.addListener(() => { void sleeper.configure().catch(report); });
-browser.runtime.onMessage.addListener((message, sender) => {
-    if (sender.id !== browser.runtime.id || !sender.url?.startsWith(browser.runtime.getURL(""))) return;
-    if (message?.type === "SLEEP_TAB" && Number.isInteger(message.tabId)) {
-        return sleeper.discardOne(message.tabId).then(result => { refreshTabs(); return { result }; });
-    }
-    if (message?.type === "CHECK_SLEEP_TABS") {
-        return sleeper.run().then(status => { refreshTabs(); return status; });
-    }
-});
-
-for (const task of [updateTabsInfo, updateGroupInfo, updateBookmarksInfo, sleeper.configure]) {
+for (const task of [updateTabsInfo, updateGroupInfo, updateBookmarksInfo]) {
     void task().catch(report);
 }
